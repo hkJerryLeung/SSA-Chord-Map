@@ -1,0 +1,5 @@
+{
+  "name": "SSA Chord Map - Interactive Harmony Guide",
+  "description": "An interactive, transposable version of the chord substitution chart with audio playback and Gemini AI harmonic analysis.",
+  "requestFramePermissions": []
+}
