@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { CHORD_DATA, KEYS } from './constants';
 import { ChordCellData, FunctionCategory, ChordSubstitution, ChordVoicing, Language, ChordAnalysis } from './types';
 import { TRANSLATIONS, LANGUAGE_LABELS } from './translations';
@@ -10,7 +11,7 @@ import { ProgressionAssistant } from './components/ProgressionAssistant';
 import { ChordDiagram } from './components/ChordDiagram';
 import { KeyboardDiagram } from './components/KeyboardDiagram';
 import { StaffNotation } from './components/StaffNotation';
-import { Sparkles, X, Wand2, ChevronDown, ChevronUp, Piano, Info, Search, ArrowUp, ArrowDown, Music, Gauge, ArrowRightLeft, PlayCircle, Plus, Loader2, CircleDot, Guitar, Globe, Reply, Trash2, ChevronLeft, ChevronRight, Github } from 'lucide-react';
+import { Sparkles, X, Wand2, ChevronDown, ChevronUp, Piano, Info, Search, ArrowUp, ArrowDown, Music, Gauge, ArrowRightLeft, PlayCircle, Plus, Loader2, CircleDot, Guitar, Globe, Reply, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const App: React.FC = () => {
   const [currentKey, setCurrentKey] = useState(0); // Default C
@@ -141,7 +142,14 @@ const App: React.FC = () => {
   const todayDate = new Date().toLocaleDateString();
 
   return (
-    <div className="h-screen w-screen bg-slate-50 flex flex-col font-sans text-slate-800 overflow-hidden">
+    <div className="h-screen w-screen bg-slate-50 flex flex-col font-sans text-slate-800 overflow-hidden relative">
+      
+      {/* Feedback Toast - Fixed positioning to appear above everything */}
+      {transposeFeedback && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[9999] bg-slate-900/90 text-white px-4 py-2 rounded-full text-xs font-bold tracking-wide shadow-xl backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200 pointer-events-none">
+          {transposeFeedback.label}
+        </div>
+      )}
       
       {/* 1. APP HEADER - Modern Glass */}
       <header className="flex-none bg-white/80 backdrop-blur-md border-b border-slate-200 z-30 h-16 flex items-center justify-between px-6 shadow-sm">
@@ -204,7 +212,7 @@ const App: React.FC = () => {
           </button>
 
           {/* Language Toggle */}
-          <div className="relative">
+          <div className="relative z-40">
              <button 
                 onClick={() => setShowLangMenu(!showLangMenu)}
                 className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors"
@@ -212,7 +220,7 @@ const App: React.FC = () => {
                 <Globe size={18} />
              </button>
              {showLangMenu && (
-                <div className="absolute top-full right-0 mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 py-1">
+                <div className="absolute top-full right-0 mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-[60] py-1">
                    {(Object.keys(LANGUAGE_LABELS) as Language[]).map(lang => (
                       <button 
                         key={lang}
@@ -226,17 +234,6 @@ const App: React.FC = () => {
              )}
           </div>
           
-          {/* GitHub Link */}
-          <a
-            href="https://github.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-            title="View on GitHub"
-          >
-            <Github size={18} />
-          </a>
-
           <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
 
           {/* AI Assistant Button */}
@@ -252,12 +249,6 @@ const App: React.FC = () => {
 
       {/* 2. MAIN CONTENT - Interactive Grid */}
       <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-50/50 relative app-scroll">
-         {/* Feedback Toast */}
-         {transposeFeedback && (
-           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white px-4 py-2 rounded-full text-xs font-bold tracking-wide shadow-xl backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
-             {transposeFeedback.label}
-           </div>
-         )}
          
          <div className="flex h-full min-w-max p-6 gap-4">
             {CHORD_DATA.map((col) => {
@@ -266,7 +257,7 @@ const App: React.FC = () => {
                return (
                   <div key={col.id} className={`flex-shrink-0 w-64 flex flex-col rounded-2xl border border-slate-200/60 shadow-sm ${col.color} overflow-hidden transition-all duration-300 hover:shadow-md`}>
                      {/* Column Header */}
-                     <div className="p-4 border-b border-slate-100 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+                     <div className="p-4 border-b border-slate-100 bg-white/50 sticky top-0 z-0">
                         <div className="flex justify-between items-baseline mb-1">
                            <h2 className="text-2xl font-serif font-bold text-slate-800">{label}</h2>
                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{degree}</span>
@@ -303,14 +294,15 @@ const App: React.FC = () => {
          </div>
       </main>
 
-      {/* 3. MODERN MODAL */}
-      {modalContent && (
+      {/* 3. MODERN MODAL - Using Portal to render outside component tree, appearing from bottom */}
+      {modalContent && createPortal(
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-[9999] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setModalContent(null)}
         >
           <div 
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col ring-1 ring-white/20 animate-in zoom-in-95 duration-200"
+            className="bg-white rounded-t-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col ring-1 ring-white/20 slide-in-from-bottom"
+            style={{ marginBottom: 0 }}
             onClick={e => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -456,7 +448,8 @@ const App: React.FC = () => {
                </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Progression Assistant Modal */}

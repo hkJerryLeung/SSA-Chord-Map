@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ColumnData, ChordSuggestion, Language } from '../types';
 import { TRANSLATIONS } from '../translations';
 import { getNextChordSuggestions } from '../services/geminiService';
@@ -118,8 +119,8 @@ export const ProgressionAssistant: React.FC<Props> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-[#F7F7F2]/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 bg-[#F7F7F2]/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" onClick={onClose}>
       <div 
         className="bg-white border border-muji-border shadow-[0_4px_20px_rgba(0,0,0,0.05)] w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" 
         onClick={e => e.stopPropagation()}
@@ -283,6 +284,7 @@ export const ProgressionAssistant: React.FC<Props> = ({
             )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { ChordCellData, ChordStyle, FunctionCategory, Language } from '../types';
 import { transposeNote, playChord, getRomanNumeral, getChordSemicones } from '../utils/music';
 import { TRANSLATIONS } from '../translations';
@@ -32,6 +33,8 @@ export const ChordCell: React.FC<Props> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const playTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cellRef = useRef<HTMLDivElement>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
   
   const t = TRANSLATIONS[language];
 
@@ -55,6 +58,18 @@ export const ChordCell: React.FC<Props> = ({
       if (playTimeoutRef.current) clearTimeout(playTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (isHovered && cellRef.current) {
+      const rect = cellRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        top: rect.top - 8, // Position above the cell
+        left: rect.left + rect.width / 2, // Center horizontally
+      });
+    } else {
+      setTooltipPosition(null);
+    }
+  }, [isHovered]);
 
   const rootNote = transposeNote(currentKey, data.rootOffset);
   const bassNote = data.bassOffset !== undefined ? transposeNote(currentKey, data.bassOffset) : null;
@@ -131,13 +146,15 @@ export const ChordCell: React.FC<Props> = ({
   };
 
   return (
-    <div 
-      className={`mb-2 ${baseClasses} ${styleClasses} ${opacityStyle}`}
-      onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{ zIndex: isHovered ? 50 : 'auto' }}
-    >
+    <>
+      <div 
+        ref={cellRef}
+        className={`mb-2 ${baseClasses} ${styleClasses} ${opacityStyle}`}
+        onClick={handleClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        style={{ zIndex: isHovered ? 50 : 'auto' }}
+      >
         {/* Left: Chord Name & Analysis */}
         <div className="flex items-center gap-2">
             {hasCategory && (
@@ -207,34 +224,44 @@ export const ChordCell: React.FC<Props> = ({
         {isPlaying && (
             <div className="absolute inset-0 rounded-xl ring-2 ring-white/30 animate-pulse pointer-events-none" />
         )}
+      </div>
 
-        {/* Tooltip */}
-        {isHovered && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-3 bg-slate-900/95 text-white text-xs rounded-lg shadow-xl whitespace-nowrap cursor-default pointer-events-none backdrop-blur-sm border border-slate-700/50 flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-150 z-50">
-                <div className="flex flex-col items-center gap-0.5">
-                    <span className="font-bold tracking-wide text-sm">{chordName}</span>
-                    <span className="font-serif italic text-slate-400">{romanNumeral}</span>
-                </div>
+      {/* Tooltip - Rendered via Portal to avoid overflow clipping */}
+      {isHovered && tooltipPosition && createPortal(
+        <div 
+          className="fixed p-3 bg-slate-900/95 text-white text-xs rounded-lg shadow-xl whitespace-nowrap cursor-default pointer-events-none backdrop-blur-sm border border-slate-700/50 flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-150 z-[10000]"
+          style={{
+            top: `${tooltipPosition.top}px`,
+            left: `${tooltipPosition.left}px`,
+            transform: 'translate(-50%, -100%)',
+            marginTop: '-8px',
+          }}
+        >
+            <div className="flex flex-col items-center gap-0.5">
+                <span className="font-bold tracking-wide text-sm">{chordName}</span>
+                <span className="font-serif italic text-slate-400">{romanNumeral}</span>
+            </div>
 
-                {/* Mini Keyboard Diagram */}
-                <div className="bg-slate-800/50 p-2 rounded-md border border-slate-700/50 mt-1">
-                    <div className="relative h-[36px] w-[205px] overflow-hidden">
-                        <div className="origin-top-left transform scale-[0.35] absolute top-0 left-0">
-                            <KeyboardDiagram rootNoteIndex={absRoot} intervals={semitones} />
-                        </div>
+            {/* Mini Keyboard Diagram */}
+            <div className="bg-slate-800/50 p-2 rounded-md border border-slate-700/50 mt-1">
+                <div className="relative h-[36px] w-[205px] overflow-hidden">
+                    <div className="origin-top-left transform scale-[0.35] absolute top-0 left-0">
+                        <KeyboardDiagram rootNoteIndex={absRoot} intervals={semitones} />
                     </div>
                 </div>
-
-                {hasCategory && (
-                   <div className="flex items-center gap-1.5 text-[10px] text-slate-300 font-medium tracking-wider uppercase pt-1 border-t border-slate-700 w-full justify-center">
-                      {CategoryIcon && <CategoryIcon size={10} />}
-                      <span>{categoryConfig.fullLabel}</span>
-                   </div>
-                )}
-                {/* Arrow */}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-slate-900/95"></div>
             </div>
-        )}
-    </div>
+
+            {hasCategory && (
+               <div className="flex items-center gap-1.5 text-[10px] text-slate-300 font-medium tracking-wider uppercase pt-1 border-t border-slate-700 w-full justify-center">
+                  {CategoryIcon && <CategoryIcon size={10} />}
+                  <span>{categoryConfig.fullLabel}</span>
+               </div>
+            )}
+            {/* Arrow */}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-slate-900/95"></div>
+        </div>,
+        document.body
+      )}
+    </>
   );
 };
